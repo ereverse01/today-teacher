@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>오늘은 내가 선생님</title>
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;700&family=Nanum+Pen+Script&display=swap">
+<style>
+/* Layout: a teacher's planning desk on graph paper. Top = step rail, middle = the current step's sheet; in step 5 a fixed 50-minute frame of fill-in blocks sits left, the live check sheet right. */
+:root{
+  --paper:#f2f4f7; --grid:#e3e8ef; --card:#ffffff; --ink:#1c2230; --muted:#5b6476; --line:#d4dae3;
+  --pen:#2546c9; --pen-ink:#ffffff;
+  --ok:#1d8a5c; --warn:#b7791f; --bad:#c2384f;
+  --s-open:#64748b; --s-model:#3563d6; --s-guided:#1f9566; --s-act:#c98a0c; --s-close:#7356c2;
+  --slot:#ffffff;
+  --display:'Do Hyeon','IBM Plex Sans KR','Malgun Gothic',sans-serif;
+  --body:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  --hand:'Nanum Pen Script','Gaegu',cursive;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#151a23; --grid:#1d2430; --card:#1e2531; --ink:#e7ebf2; --muted:#9aa4b6; --line:#323b4b;
+  --pen:#7d97ff; --pen-ink:#0f1630; --ok:#4fc58e; --warn:#e3b04f; --bad:#f07b8f;
+  --s-open:#5f6f86; --s-model:#3d63c9; --s-guided:#1c8a5d; --s-act:#a8730b; --s-close:#6a4fb8; --slot:#141a24;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#151a23; --grid:#1d2430; --card:#1e2531; --ink:#e7ebf2; --muted:#9aa4b6; --line:#323b4b;
+  --pen:#7d97ff; --pen-ink:#0f1630; --ok:#4fc58e; --warn:#e3b04f; --bad:#f07b8f;
+  --s-open:#5f6f86; --s-model:#3d63c9; --s-guided:#1c8a5d; --s-act:#a8730b; --s-close:#6a4fb8; --slot:#141a24;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px;color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--pen);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+p{margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 20px}
+.brand h1{font-size:34px;line-height:1.1}
+[hidden]{display:none!important}
+.brand .lede{color:var(--muted);font-size:14px}
+.pen{font-family:var(--hand);color:var(--pen);font-size:22px;line-height:1.2}
+.steps{display:flex;gap:6px;flex-wrap:wrap;list-style:none;margin:0;padding:0}
+.steps button{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 13px 6px 6px;font-size:13.5px;color:var(--muted)}
+.steps button .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--grid);font-size:12px;font-weight:700;color:var(--muted)}
+.steps button[aria-current="step"]{border-color:var(--pen);color:var(--ink)}
+.steps button[aria-current="step"] .n{background:var(--pen);color:var(--pen-ink)}
+.steps button.done .n{background:color-mix(in srgb,var(--pen) 22%,var(--card));color:var(--pen)}
+.sheet{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px clamp(16px,3vw,30px);display:flex;flex-direction:column;gap:18px;min-width:0}
+.sheet-head{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:12px;letter-spacing:.12em;color:var(--pen);font-weight:700}
+.sheet-head h2{font-size:28px;line-height:1.2}
+.sheet-head p{color:var(--muted);max-width:68ch}
+.navrow{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 16px;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--pen);border-color:var(--pen);color:var(--pen-ink)}
+.btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{padding:5px 11px;font-size:13px;border-radius:8px}
+.hint{color:var(--muted);font-size:13.5px}
+
+/* step 1: topic cards */
+.units{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.ucard{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;min-height:160px}
+.ucard:hover{border-color:var(--muted)}
+.ucard[aria-pressed="true"]{border-color:var(--pen);box-shadow:0 0 0 2px var(--pen) inset}
+.ucard .fld{font-size:12px;color:var(--pen);font-weight:700;letter-spacing:.06em}
+.ucard .t{font-family:var(--display);font-size:22px;line-height:1.2}
+.ucard .q{font-size:13.5px;color:var(--muted);margin-top:auto}
+
+/* step 2: outline */
+.outline{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px}
+.box{border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.topic{font-size:17px;font-weight:500;line-height:1.55}
+.flow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.flow li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:7px 0;position:relative}
+.flow li .d{width:24px;height:24px;border-radius:50%;border:2px solid var(--pen);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--pen);background:var(--card);position:relative;z-index:1}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:11px;top:30px;bottom:-8px;width:2px;background:var(--line)}
+.key{font-family:Georgia,'Times New Roman',serif;font-size:16.5px;line-height:1.7;background:var(--paper);border-radius:10px;padding:12px 14px}
+.terms{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;font-size:14px}
+.terms b{font-family:Georgia,'Times New Roman',serif;font-weight:700}
+
+/* step 3/4: choice cards */
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.ccard{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ccard:hover{border-color:var(--muted)}
+.ccard[aria-pressed="true"]{border-color:var(--pen);box-shadow:0 0 0 2px var(--pen) inset}
+.ccard .t{font-weight:700;font-size:16px}
+.ccard .en{font-size:12.5px;color:var(--muted)}
+.ccard .src{font-size:12px;color:var(--pen);font-weight:500}
+.ccard .d{font-size:13.5px;color:var(--muted)}
+.pm{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 8px;font-size:13.5px}
+.pm .p{color:var(--ok)} .pm .m{color:var(--bad)}
+.fit{font-size:13px;border-radius:8px;padding:6px 9px;margin-top:4px}
+.fit.good{background:color-mix(in srgb,var(--ok) 13%,var(--card));color:var(--ok)}
+.fit.bad{background:color-mix(in srgb,var(--bad) 12%,var(--card));color:var(--bad)}
+.section{display:flex;flex-direction:column;gap:10px}
+.section h3{font-size:21px}
+.flip{animation:flip .5s ease}
+@keyframes flip{0%{transform:rotateY(90deg)}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){.flip{animation:none}}
+input.name{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--card);max-width:220px}
+
+/* step 5: fixed frame of fill-in blocks */
+.builder{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+.frame{display:flex;flex-direction:column;gap:0;min-width:0}
+.stage{--c:var(--s-open);display:grid;grid-template-columns:74px minmax(0,1fr);gap:12px;padding-bottom:14px;position:relative}
+.stage:not(:last-child)::before{content:"";position:absolute;left:36px;top:58px;bottom:0;width:3px;background:var(--line)}
+.stage-tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px}
+.stage-tab .mn{width:58px;height:50px;border-radius:12px;background:var(--c);color:#fff;display:grid;place-items:center;font-family:var(--display);font-size:19px;line-height:1;position:relative;z-index:1}
+.stage-tab .mn small{font-family:var(--body);font-size:11px;display:block;margin-top:2px;opacity:.9}
+.stage-tab .nm{font-family:var(--display);font-size:16px;color:var(--c);text-align:center;line-height:1.1;margin-top:4px}
+.stage-tab .en{font-size:11px;color:var(--muted);font-style:italic;text-align:center}
+.stage-tab .nm,.stage-tab .en{position:relative;z-index:1;background:var(--card);padding:0 3px}
+.stage-body{display:flex;flex-direction:column;gap:8px;min-width:0}
+.stage-note{font-size:13px;color:var(--muted)}
+.blk{--c:var(--s-open);position:relative;background:var(--c);color:#fff;border-radius:10px;padding:10px 12px 11px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.blk::before{content:"";position:absolute;left:20px;top:-1px;width:24px;height:6px;border-radius:0 0 6px 6px;background:var(--card)}
+.blk .lbl{font-weight:700;font-size:13px;letter-spacing:.02em;opacity:.92}
+.blk .line{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:14.5px;min-width:0}
+.blk .line .w{white-space:normal}
+.slot{flex:1 1 200px;min-width:0;border:none;border-radius:999px;background:var(--slot);color:var(--ink);padding:6px 14px;font-size:14px}
+.slot.short{flex:0 1 140px}
+.slot::placeholder{color:color-mix(in srgb,var(--muted) 85%,transparent)}
+.slot.filled{box-shadow:0 0 0 2px rgba(255,255,255,.75)}
+select.slot{flex:0 0 auto;padding-right:28px;border-radius:8px}
+.order{display:flex;flex-direction:column;gap:5px}
+.order .it{display:flex;align-items:center;gap:8px;background:var(--slot);color:var(--ink);border-radius:8px;padding:5px 6px 5px 10px;font-size:14px}
+.order .it .k{font-weight:700;color:var(--c);min-width:16px}
+.order .it span.tx{flex:1;min-width:0}
+.mini{border:1px solid var(--line);background:var(--card);border-radius:6px;width:26px;height:24px;line-height:1;color:var(--ink)}
+.mini:disabled{opacity:.35}
+.tchips{display:flex;flex-wrap:wrap;gap:6px}
+.tchips button{border:1.5px solid rgba(255,255,255,.7);background:transparent;color:#fff;border-radius:999px;padding:2px 11px;font-size:13.5px}
+.tchips button[aria-pressed="true"]{background:var(--slot);color:var(--ink);border-color:var(--slot);font-weight:700}
+.checks{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;display:flex;flex-direction:column;gap:10px}
+.checks h3{font-size:20px}
+.meter{display:flex;flex-direction:column;gap:4px}
+.bar{height:12px;border-radius:999px;background:var(--grid);overflow:hidden}
+.bar span{display:block;height:100%;background:var(--pen);transition:width .3s}
+.meter .lbl{display:flex;justify-content:space-between;font-size:13px;font-variant-numeric:tabular-nums}
+.clist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.clist li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;font-size:13.5px;line-height:1.45}
+.clist .st{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;margin-top:1px}
+.st.ok{background:var(--ok)} .st.warn{background:var(--warn)} .st.wait{background:var(--line);color:var(--muted)}
+.clist .ct{font-weight:700}
+.clist .cd{color:var(--muted)}
+.clist .src{color:var(--pen);font-size:12px}
+
+/* step 6: plan */
+.plan{border:1px solid var(--ink);border-radius:4px;padding:22px;display:flex;flex-direction:column;gap:14px;background:var(--card)}
+.plan-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:10px}
+.plan-h h3{font-size:26px}
+.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 14px;font-size:14px}
+.kv dt{color:var(--muted);font-weight:500}
+.kv dd{margin:0}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+th{background:var(--paper);font-weight:700}
+td.min{font-variant-numeric:tabular-nums;white-space:nowrap}
+td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+td .empty{color:var(--bad)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:20}
+.toast.on{opacity:1}
+.modebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn.teacher{border-color:var(--ink);font-weight:700}
+.submit{display:flex;flex-wrap:wrap;gap:10px;align-items:center;border:1.5px dashed var(--pen);border-radius:12px;padding:14px 16px}
+.submit p{flex:1 1 260px;min-width:0}
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stat{border:1px solid var(--line);border-radius:10px;padding:8px 14px;display:flex;flex-direction:column}
+.stat b{font-family:var(--display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:12.5px;color:var(--muted)}
+.subs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.sub{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.sub:hover{border-color:var(--pen)}
+.sub .who{font-weight:700;font-size:15.5px}
+.sub .acct{font-size:12px;color:var(--muted)}
+.sub .tp{font-size:13.5px}
+.sub .row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.filter{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--card)}
+.copybox{width:100%;min-height:140px;font-size:12.5px;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--paper)}
+
+@media (max-width:860px){
+  .outline,.builder{grid-template-columns:minmax(0,1fr)}
+  .checks{position:static}
+  .brand h1{font-size:28px}
+  .kv{grid-template-columns:minmax(0,1fr)}
+  .kv dt{margin-top:6px}
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .stage:not(:last-child)::before{display:none}
+  .stage-tab{flex-direction:row;gap:10px;align-items:center}
+  .stage-tab .mn{width:auto;height:auto;padding:6px 10px;font-size:16px}
+  .stage-tab .mn small{display:inline;margin:0 0 0 4px}
+  .stage-tab .nm{margin:0}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>오늘은 내가 선생님</h1>
+      <p class="lede">새로운 주제로 50분 수업을 직접 설계해 보기 · <span class="pen">"A good teacher is a combination of many abilities."</span></p>
+    </div>
+    <div class="modebar"><ol class="steps" id="steps"></ol></div>
+  </header>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ---------- content: new topics ---------- */
+const TOPICS=[
+{id:'bee',field:'생태',title:'꿀벌이 사라지면',
+ goal:'꿀벌이 하는 일과 꿀벌이 줄어드는 이유를 설명할 수 있다.',
+ points:['꿀벌은 꽃가루를 옮겨 식물이 열매를 맺게 한다 (pollinate)','우리가 먹는 과일과 채소의 상당수가 꽃가루를 옮기는 곤충에 기대고 있다','서식지 감소, 농약, 기후 변화 때문에 꿀벌이 줄고 있다'],
+ key:'When bees disappear, many of the fruits and vegetables we eat disappear with them.',
+ terms:[['pollinate','꽃가루를 옮기다'],['habitat','서식지'],['pesticide','농약'],['decline','감소하다']],
+ hook:'오늘 아침에 먹은 것 중에 꿀벌 덕분에 생긴 음식이 있을까요?'},
+{id:'sleep',field:'뇌과학',title:'잠이 기억을 만든다',
+ goal:'잠이 기억에 어떤 역할을 하는지 설명할 수 있다.',
+ points:['자는 동안 뇌는 낮에 배운 것을 정리해 오래 가는 기억으로 바꾼다 (consolidate)','밤을 새우면 공부한 내용이 제대로 저장되지 않는다','청소년에게는 하루 8~10시간의 잠이 권장된다'],
+ key:'While you sleep, your brain is busy turning what you learned today into long-term memory.',
+ terms:[['consolidate','굳히다, 강화하다'],['memory','기억'],['sleep-deprived','잠이 부족한'],['brain','뇌']],
+ hook:'시험 전날 밤새 공부한 내용, 다음 날 얼마나 기억났나요?'},
+{id:'bubble',field:'미디어',title:'추천 알고리즘과 필터 버블',
+ goal:'필터 버블이 무엇인지 알고 벗어나는 방법을 말할 수 있다.',
+ points:['앱은 내가 클릭한 것과 비슷한 것을 계속 추천한다 (algorithm)','그러다 보면 비슷한 정보와 생각만 보게 되는 필터 버블에 갇힌다','일부러 다른 관점을 찾아보면 버블에서 벗어날 수 있다'],
+ key:'The more you click on something, the more the app shows you things just like it.',
+ terms:[['algorithm','알고리즘'],['recommend','추천하다'],['filter bubble','필터 버블'],['perspective','관점']],
+ hook:'친구와 내 유튜브 첫 화면은 얼마나 다를까요?'},
+{id:'fashion',field:'환경·경제',title:'패스트 패션의 숨은 비용',
+ goal:'패스트 패션의 문제와 그 대안을 설명할 수 있다.',
+ points:['패스트 패션은 유행하는 옷을 싸고 빠르게 만들어 판다','옷을 만들 때 물이 많이 들고, 금방 버려진 옷은 쓰레기가 된다','오래 입기, 중고 거래, 수선이 대안이 될 수 있다'],
+ key:'A cheap T-shirt may cost little at the store, but it costs a lot for the planet.',
+ terms:[['trend','유행'],['waste','쓰레기, 낭비'],['secondhand','중고의'],['sustainable','지속 가능한']],
+ hook:'옷장에 1년 동안 한 번도 안 입은 옷이 몇 벌 있나요?'},
+{id:'star',field:'천문',title:'별빛은 과거에서 온다',
+ goal:'우리가 보는 별빛이 과거의 빛인 이유를 설명할 수 있다.',
+ points:['빛도 이동하는 데 시간이 걸린다','지금 보는 햇빛은 약 8분 전에 태양을 떠난 빛이다','아주 먼 별의 빛은 수천 년 전에 출발해서, 그 별은 지금 없을 수도 있다'],
+ key:'When you look at the stars, you are looking into the past.',
+ terms:[['light-year','광년'],['distance','거리'],['travel','이동하다'],['past','과거']],
+ hook:'지금 보이는 별이 사실은 이미 사라졌을 수도 있다면?'},
+{id:'laugh',field:'심리·사회',title:'웃음은 전염된다',
+ goal:'웃음이 전염되는 이유와 웃음의 역할을 설명할 수 있다.',
+ points:['다른 사람이 웃으면 나도 모르게 따라 웃게 된다 (contagious)','사람은 혼자 있을 때보다 함께 있을 때 훨씬 자주 웃는다','함께 웃으면 사람들 사이가 더 가까워진다'],
+ key:'We laugh much more often with other people than when we are alone.',
+ terms:[['contagious','전염되는'],['mimic','흉내 내다'],['bond','유대'],['social','사회적인']],
+ hook:'친구가 웃는 걸 보고 이유도 모르고 따라 웃은 적 있나요?'},
+{id:'fair',field:'경제·윤리',title:'공정무역 초콜릿',
+ goal:'공정무역이 무엇이고 왜 필요한지 설명할 수 있다.',
+ points:['카카오 농부는 초콜릿 가격 중 아주 작은 몫만 받는다','공정무역은 농부에게 최저 가격을 보장하고 아동 노동을 금지한다','소비자가 무엇을 사는지가 생산자의 삶을 바꿀 수 있다'],
+ key:'Every time you buy something, you are voting for the kind of world you want.',
+ terms:[['fair trade','공정무역'],['farmer','농부'],['minimum price','최저 가격'],['consumer','소비자']],
+ hook:'초콜릿 하나 값 중에서 카카오 농부는 얼마를 받을까요?'},
+{id:'mistake',field:'교육·심리',title:'실수가 뇌를 키운다',
+ goal:'성장 마인드셋이 무엇인지, 실수를 어떻게 바라봐야 하는지 말할 수 있다.',
+ points:['능력은 타고나는 게 아니라 노력으로 자란다고 믿는 것이 성장 마인드셋이다','실수를 하고 고칠 때 뇌는 더 많이 배운다','실수를 숨기기보다 배울 기회로 삼아야 한다'],
+ key:'Mistakes are not proof that you are failing; they are proof that you are learning.',
+ terms:[['growth mindset','성장 마인드셋'],['mistake','실수'],['effort','노력'],['improve','나아지다']],
+ hook:'지금 잘하는 것 중에 처음엔 실수투성이였던 게 있나요?'}
+];
+const STRENGTHS=[
+ {id:'corr',t:'훌륭한 교정',en:'excellent corrections',src:'8번',d:'틀린 부분을 정확히 짚어 고쳐 준다'},
+ {id:'enc',t:'격려하는 태도',en:'an encouraging approach',src:'8번',d:'실수해도 다시 해 볼 마음이 들게 한다'},
+ {id:'insp',t:'영감 주기',en:'the ability to inspire',src:'8번',d:'더 알고 싶다는 마음이 생기게 한다'},
+ {id:'aes',t:'예리한 미적 감각',en:'a keen aesthetic sense',src:'8번',d:'판서와 자료를 한눈에 들어오게 꾸민다'},
+ {id:'pace',t:'수업 속도 조절',en:'good pacing of the class',src:'8번',d:'지루하지도 벅차지도 않게 시간을 쓴다'},
+ {id:'expr',t:'표현력',en:'expressiveness',src:'7번',d:'주제에 대한 열정을 청중에게 그대로 전한다'}
+];
+const CLASSES=[
+ {id:'comp',t:'경쟁이 세면 정신없어지는 반',src:'8번',d:'점수나 순위가 걸리면 긴장해서 실력을 못 낸다. "drives you to distraction"'},
+ {id:'shy',t:'앞에 나서기 부끄러운 반',src:'7번',d:'자의식(self-consciousness)이 강해 여러 사람 앞에서 말하기를 어려워한다'},
+ {id:'basic',t:'영어 단어부터 막히는 반',src:'9번',d:'도움 없이 하면 금방 길을 잃는다. 비계가 꼭 필요하다'},
+ {id:'energy',t:'오래 앉아 있기 힘든 반',src:'9번',d:'가만히 듣거나 혼자 쓰는 시간이 길면 금방 지친다'},
+ {id:'mixed',t:'실력 차이가 큰 반',src:'8번',d:'잘하는 학생과 어려워하는 학생이 섞여 있어 짝·모둠 구성이 중요하다'}
+];
+/* 활동 종류. blocks의 parts: 문자열 = 고정 글, {k,ph} = 입력 칸, {k,opts} = 고르기 칸 */
+const ACTS=[
+ {id:'quiz',t:'OX 퀴즈 쇼',en:'O/X quiz',how:'핵심 내용을 O/X 문제로 만들어 다 같이 맞혀 본다',p:'짧은 시간에 모두가 참여한다',m:'점수 경쟁이 되면 긴장할 수 있다',
+  demo:'첫 문제를 다 같이 풀어 봐요:',
+  blocks:[
+   {lbl:'문제 1',parts:[{k:'q1',ph:'O/X 문제 문장'},'정답',{k:'a1',opts:['O','X']}]},
+   {lbl:'문제 2',parts:[{k:'q2',ph:'O/X 문제 문장'},'정답',{k:'a2',opts:['O','X']}]},
+   {lbl:'문제 3',parts:[{k:'q3',ph:'O/X 문제 문장'},'정답',{k:'a3',opts:['O','X']}]},
+   {lbl:'점수 방식',parts:[{k:'score',opts:['점수 없이 다 함께','모둠 점수 합산','개인 순위 발표']}]}],
+  fit:{comp:['bad','점수 방식을 "점수 없이"나 "모둠 합산"으로 고르세요'],basic:['good','O/X라 부담이 적어요'],energy:['good','몸으로 O/X를 표시하게 하면 좋아요']},
+  rules:[{cls:'comp',k:'score',v:'개인 순위 발표',msg:'개인 순위 발표는 이 반을 정신없게 만들 수 있어요.'}]},
+ {id:'role',t:'역할극',en:'role-play',how:'주제와 관련된 장면을 정해 짝이나 모둠이 연기한다',p:'내용을 자기 말로 바꿔 쓰게 된다',m:'앞에서 발표하는 부담이 크다',
+  demo:'제가 먼저 한 장면을 보여 줄게요:',
+  blocks:[
+   {lbl:'등장인물',parts:['A:',{k:'pa',ph:'예: 꿀벌',short:1},'B:',{k:'pb',ph:'예: 농부',short:1}]},
+   {lbl:'상황',parts:[{k:'sit',ph:'어떤 장면에서 무슨 일이 일어나나요?'}]},
+   {lbl:'꼭 써야 할 표현',parts:[{k:'must',ph:'대사에 꼭 넣을 영어 표현'}]},
+   {lbl:'발표 방식',parts:[{k:'show',opts:['모둠 안에서만','하고 싶은 모둠만 앞에서','모든 모둠이 앞에서']}]}],
+  fit:{shy:['bad','발표 방식을 "모둠 안에서만"으로 고르면 부담이 줄어요'],energy:['good','움직이면서 배워요']},
+  rules:[{cls:'shy',k:'show',v:'모든 모둠이 앞에서',msg:'모든 모둠이 앞에서 하면 이 반은 긴장해서 내용을 못 보여 줄 수 있어요.'}]},
+ {id:'interview',t:'짝 인터뷰',en:'pair interview',how:'짝에게 주제와 관련된 질문을 하고 답을 정리한다',p:'모두가 말하고 듣는다',m:'짝에 따라 활동의 질이 달라진다',
+  demo:'제가 한 친구를 인터뷰해 볼게요:',
+  blocks:[
+   {lbl:'질문 1',parts:[{k:'i1',ph:'짝에게 물어볼 질문'}]},
+   {lbl:'질문 2',parts:[{k:'i2',ph:'짝에게 물어볼 질문'}]},
+   {lbl:'질문 3',parts:[{k:'i3',ph:'짝에게 물어볼 질문'}]},
+   {lbl:'정리 문장 틀',parts:['My partner',{k:'frame',ph:'예: thinks ___ because ___.'}]},
+   {lbl:'짝 정하기',parts:[{k:'pair',opts:['옆자리 친구','선생님이 정해 줌','자유롭게']}]}],
+  fit:{shy:['good','여러 사람 앞이 아니라 한 명과 이야기해요'],comp:['good','경쟁이 없어요'],mixed:['good','짝을 잘 정하면 서로 도와요']},
+  rules:[{cls:'mixed',k:'pair',v:'자유롭게',msg:'자유롭게 짝을 지으면 비슷한 실력끼리만 모여요. 선생님이 정해 주세요.'}]},
+ {id:'gap',t:'정보 빈칸 채우기',en:'information gap',how:'A와 B가 서로 다른 정보 카드를 받고, 말로 물어 빈칸을 채운다',p:'꼭 대화를 해야만 풀 수 있다',m:'카드를 미리 만들어야 한다',
+  demo:'제가 한 사람 역할을 맡아 시범을 보일게요:',
+  blocks:[
+   {lbl:'A 카드에만 있는 정보',parts:[{k:'ga',ph:'A만 아는 내용'}]},
+   {lbl:'B 카드에만 있는 정보',parts:[{k:'gb',ph:'B만 아는 내용'}]},
+   {lbl:'둘이 함께 답할 질문',parts:[{k:'gq',ph:'두 정보를 합쳐야 답할 수 있는 질문'}]},
+   {lbl:'활동 형태',parts:[{k:'gform',opts:['짝','4인 모둠']}]}],
+  fit:{basic:['good','카드에 단어를 미리 넣어 줄 수 있어요'],mixed:['good','서로의 정보가 꼭 필요해서 함께하게 돼요'],shy:['good','한 명과 이야기해요']},
+  rules:[]},
+ {id:'debate',t:'미니 찬반 토론',en:'mini debate',how:'질문 하나에 찬성·반대로 나눠 이유를 말한다',p:'생각하고 근거를 대는 힘이 자란다',m:'말 잘하는 학생만 말할 수 있다',
+  demo:'찬성 쪽 의견을 제가 먼저 말해 볼게요:',
+  blocks:[
+   {lbl:'토론 질문',parts:['Should',{k:'dq',ph:'예: schools ban fast fashion uniforms'},'?']},
+   {lbl:'찬성 근거 예시',parts:[{k:'pro',ph:'찬성 쪽 이유 한 가지'}]},
+   {lbl:'반대 근거 예시',parts:[{k:'con',ph:'반대 쪽 이유 한 가지'}]},
+   {lbl:'진행 방식',parts:[{k:'dform',opts:['짝끼리','모둠 안에서','반 전체 두 편으로']}]}],
+  fit:{comp:['bad','반 전체 대결보다 짝이나 모둠 안에서 해 보세요'],shy:['bad','짝끼리 진행하면 부담이 줄어요']},
+  rules:[{cls:'comp',k:'dform',v:'반 전체 두 편으로',msg:'반 전체 대결은 이기고 지는 경쟁이 되기 쉬워요.'},{cls:'shy',k:'dform',v:'반 전체 두 편으로',msg:'반 전체 앞에서 말하기는 이 반에 부담이 커요.'}]},
+ {id:'map',t:'마인드맵 그리기',en:'mind map',how:'가운데 핵심어를 두고 가지를 뻗어 내용을 정리한다',p:'내용의 구조가 한눈에 보인다',m:'혼자 하면 막히는 학생이 생긴다',
+  demo:'가지 하나를 다 같이 채워 봐요:',
+  blocks:[
+   {lbl:'가운데 말',parts:[{k:'center',ph:'마인드맵 가운데 들어갈 핵심어'}]},
+   {lbl:'내가 미리 그려 줄 가지',parts:[{k:'b1',ph:'가지 1',short:1},{k:'b2',ph:'가지 2',short:1}]},
+   {lbl:'학생이 채울 빈 가지',parts:[{k:'nb',opts:['1개','2개','3개']},'개를 직접 채워요']},
+   {lbl:'활동 형태',parts:[{k:'mform',opts:['혼자','짝','모둠']}]}],
+  fit:{energy:['bad','혼자 오래 그리기보다 짝·모둠으로 해 보세요'],basic:['good','가지를 미리 그려 주면 따라오기 쉬워요']},
+  rules:[{cls:'energy',k:'mform',v:'혼자',msg:'혼자 오래 그리면 이 반은 금방 지쳐요.'},{cls:'mixed',k:'mform',v:'혼자',msg:'혼자 하면 어려워하는 학생이 막혀요. 짝이나 모둠으로 해 보세요.'}]}
+];
+/* 고정된 50분 틀 (9번 점진적 책임 이양) */
+function frame(a,u){return[
+ {id:'open',nm:'열기',en:'Warm-up',min:5,c:'var(--s-open)',note:'흥미를 끌고, 내가 왜 이 주제를 좋아하는지 전해요 (7번).',blocks:[
+  {lbl:'질문 던지기',parts:['여러분,',{k:'hook',ph:u.hook}]},
+  {lbl:'나의 열정 한마디',parts:[{k:'passion',ph:'이 주제를 가르치고 싶은 이유. 예: 저도 처음 알았을 때 정말 놀랐어요!'}]}]},
+ {id:'model',nm:'시범',en:'I do',min:10,c:'var(--s-model)',note:'선생님이 핵심 내용을 설명해요. 설명 순서를 정하고, 예를 하나 들어요.',blocks:[
+  {lbl:'설명 순서',special:'order'},
+  {lbl:'내가 들 예시',parts:['예를 들어,',{k:'example',ph:'친구들이 바로 떠올릴 수 있는 예'}]},
+  {lbl:'칠판에 쓸 영어 단어 두 개',special:'terms'}]},
+ {id:'guided',nm:'함께',en:'We do',min:10,c:'var(--s-guided)',note:'활동을 다 같이 한 번 해 봐요. 이때만 도움 장치(비계)를 줘요 (9번).',blocks:[
+  {lbl:'먼저 같이 해 보기',parts:[a.demo,{k:'demo',ph:'활동의 첫 문제나 장면'}]},
+  {lbl:'도움 장치 (비계)',parts:[{k:'hintType',opts:['단어 상자','문장 첫머리','예시 답']},{k:'hint',ph:'실제로 줄 도움 내용'}]}]},
+ {id:'act',nm:a.t,en:'You do',min:20,c:'var(--s-act)',note:'이제 학생들끼리 해요. 도움 장치는 치우고, 선생님은 필요할 때만 도와요.',blocks:a.blocks.map(b=>({...b,parts:b.parts.map(p=>typeof p==='object'?{...p,k:a.id+'.'+p.k}:p)}))},
+ {id:'close',nm:'닫기',en:'Wrap-up',min:5,c:'var(--s-close)',note:'오늘 배운 것을 확인하고 마무리해요.',blocks:[
+  {lbl:'출구 질문',parts:[{k:'exit',ph:'교실을 나가기 전에 답할 질문 하나'}]},
+  {lbl:'오늘의 한 문장',parts:['오늘 꼭 기억할 것은',{k:'take',ph:'핵심 한 문장'},'입니다.']}]}
+]}
+const STEPS=['주제 고르기','골자 보기','우리 반과 나','활동 고르기','수업 코딩','지도안 완성'];
+
+/* ---------- state ---------- */
+const KEY='teacher-lesson-v2';
+function blank(){return{step:0,topic:null,no:'',submittedAt:null,name:'',strengths:[],cls:null,act:null,v:{},order:[0,1,2],terms:[]}}
+let S=blank();
+try{const raw=localStorage.getItem(KEY);if(raw)S=Object.assign(blank(),JSON.parse(raw))}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const T=()=>TOPICS.find(t=>t.id===S.topic);
+const A=()=>ACTS.find(a=>a.id===S.act);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=s=>document.querySelector(s);
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('on'),1800)}
+function canGo(i){if(i===0)return true;if(!S.topic)return false;if(i>=4)return !!S.act;return true}
+function go(i){if(!canGo(i)){toast(S.topic?'활동을 하나 골라 주세요':'먼저 주제를 골라 주세요');return}S.step=i;save();render();window.scrollTo({top:0,behavior:'smooth'})}
+function renderSteps(){$('#steps').innerHTML=STEPS.map((s,i)=>`<li><button data-go="${i}" ${i===S.step?'aria-current="step"':''} class="${i<S.step?'done':''}"><span class="n">${i+1}</span>${s}</button></li>`).join('')}
+function nav(prev,next,dis){return `<div class="navrow">${S.step>0?`<button class="btn" data-go="${S.step-1}">← ${prev}</button>`:'<span></span>'}${next?`<button class="btn primary" data-go="${S.step+1}" ${dis?'disabled':''}>${next} →</button>`:''}</div>`}
+function head(eb,t,p){return `<div class="sheet-head"><span class="eyebrow">${eb}</span><h2>${t}</h2>${p?`<p>${p}</p>`:''}</div>`}
+
+/* ---------- steps ---------- */
+function vStep0(){
+ return `<section class="sheet">${head('STEP 1','가르치고 싶은 주제를 고르세요','교과서 밖의 새로운 주제 여덟 개예요. 친구들에게 가장 재미있게 설명할 수 있을 것 같은 주제를 골라 보세요.')}
+ <div class="units">${TOPICS.map(t=>`<button class="ucard" data-topic="${t.id}" aria-pressed="${S.topic===t.id}"><span class="fld">${t.field}</span><span class="t">${esc(t.title)}</span><span class="q">${esc(t.hook)}</span></button>`).join('')}</div>
+ ${nav('','골자 보기',!S.topic)}</section>`;
+}
+function vStep1(){
+ const t=T();
+ return `<section class="sheet">${head('STEP 2 · '+t.field,esc(t.title),'가르치기 전에 선생님이 먼저 알아야 할 골자예요. 이 세 가지를 친구들이 이해하면 수업 성공이에요.')}
+ <div class="outline">
+  <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+   <div class="box"><span class="eyebrow">수업 목표</span><p class="topic">학생들이 ${esc(t.goal)}</p></div>
+   <div class="box"><span class="eyebrow">꼭 가르칠 핵심 세 가지</span><ol class="flow">${t.points.map((f,i)=>`<li><span class="d">${i+1}</span><span>${esc(f)}</span></li>`).join('')}</ol></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+   <div class="box"><span class="eyebrow">핵심 문장</span><p class="key">${esc(t.key)}</p></div>
+   <div class="box"><span class="eyebrow">핵심 영어 단어</span><div class="terms">${t.terms.map(x=>`<b>${esc(x[0])}</b><span>${esc(x[1])}</span>`).join('')}</div></div>
+   <div class="box"><span class="eyebrow">수업을 여는 질문 예시</span><p class="pen">${esc(t.hook)}</p></div>
+  </div>
+ </div>
+ ${nav('주제 다시 고르기','우리 반과 나')}</section>`;
+}
+function vStep2(){
+ return `<section class="sheet">${head('STEP 3','누구에게, 어떤 선생님으로 가르칠까요?','8번 지문: 교사의 자질은 학생과, 그리고 수업 여건과 어우러져야 해요. 우리 반을 정하고, 나의 강점을 골라요.')}
+ <div class="section"><div class="navrow"><h3>우리 반 조건 카드</h3><button class="btn small" id="draw">무작위로 뽑기</button></div>
+  <div class="grid2">${CLASSES.map(c=>`<button class="ccard" data-cls="${c.id}" aria-pressed="${S.cls===c.id}"><span class="src">${c.src} 지문에서</span><span class="t">${c.t}</span><span class="d">${c.d}</span></button>`).join('')}</div></div>
+ <div class="section"><h3>나의 교사 강점 두 가지 <span class="hint">(${S.strengths.length}/2)</span></h3>
+  <p class="hint">"A good teacher is a combination of many abilities." 모든 걸 다 갖출 필요는 없어요.</p>
+  <div class="grid2">${STRENGTHS.map(s=>`<button class="ccard" data-str="${s.id}" aria-pressed="${S.strengths.includes(s.id)}"><span class="src">${s.src}</span><span class="t">${s.t}</span><span class="en">${s.en}</span><span class="d">${s.d}</span></button>`).join('')}</div></div>
+ <div class="navrow" style="justify-content:flex-start"><label class="hint" for="tno">학번 <input class="name" id="tno" value="${esc(S.no)}" placeholder="예: 10315" style="max-width:110px"></label>
+ <label class="hint" for="tname">선생님 이름 <input class="name" id="tname" value="${esc(S.name)}" placeholder="예: 김민지 선생님"></label></div>
+ ${nav('골자 보기','활동 고르기')}</section>`;
+}
+function vStep3(){
+ const cls=CLASSES.find(c=>c.id===S.cls);
+ return `<section class="sheet">${head('STEP 4','어떤 활동으로 가르칠까요?','수업의 중심이 될 활동 하나를 골라요. 우리 반에 잘 맞는지도 함께 살펴보세요.')}
+ ${cls?`<p class="hint">우리 반: <b>${cls.t}</b></p>`:'<p class="hint">3단계에서 우리 반을 고르면 활동마다 궁합이 표시돼요.</p>'}
+ <div class="grid2">${ACTS.map(a=>{const f=cls&&a.fit[cls.id];return `<button class="ccard" data-act="${a.id}" aria-pressed="${S.act===a.id}">
+   <span class="t">${a.t}</span><span class="en">${a.en}</span><span class="d">${a.how}</span>
+   <span class="pm"><b class="p">장점</b><span>${a.p}</span><b class="m">주의</b><span>${a.m}</span></span>
+   ${f?`<span class="fit ${f[0]}">${f[0]==='good'?'잘 맞아요':'조심'}: ${f[1]}</span>`:''}</button>`}).join('')}</div>
+ ${nav('우리 반과 나','수업 코딩하기',!S.act)}</section>`;
+}
+function partHTML(p){
+ if(typeof p==='string')return `<span class="w">${esc(p)}</span>`;
+ const val=S.v[p.k]??'';
+ if(p.opts){const cur=val||p.opts[0];return `<select class="slot" data-k="${p.k}" aria-label="고르기">${p.opts.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')}</select>`}
+ return `<input class="slot ${p.short?'short':''} ${val.trim()?'filled':''}" data-k="${p.k}" value="${esc(val)}" placeholder="${esc(p.ph)}" aria-label="${esc(p.ph)}">`;
+}
+function blockHTML(b,st){
+ const t=T();
+ if(b.special==='order')return `<div class="blk" style="--c:${st.c}"><span class="lbl">${b.lbl}</span><div class="order">${S.order.map((pi,i)=>`<div class="it"><span class="k">${i+1}</span><span class="tx">${esc(t.points[pi])}</span><button class="mini" data-ord="${i}" data-d="-1" ${i===0?'disabled':''} aria-label="위로">↑</button><button class="mini" data-ord="${i}" data-d="1" ${i===2?'disabled':''} aria-label="아래로">↓</button></div>`).join('')}</div></div>`;
+ if(b.special==='terms')return `<div class="blk" style="--c:${st.c}"><span class="lbl">${b.lbl}</span><div class="tchips">${t.terms.map(x=>`<button data-term="${esc(x[0])}" aria-pressed="${S.terms.includes(x[0])}">${esc(x[0])}</button>`).join('')}</div></div>`;
+ return `<div class="blk" style="--c:${st.c}"><span class="lbl">${b.lbl}</span><div class="line">${b.parts.map(partHTML).join('')}</div></div>`;
+}
+function vStep4(){
+ const t=T(),a=A(),F=frame(a,t);
+ return `<section class="sheet">${head('STEP 5 · '+esc(t.title)+' × '+a.t,'수업 틀을 채워 코딩하세요','50분 수업의 틀은 정해져 있어요. 9번 지문처럼 시범 → 함께 → 혼자로 갈수록 학생에게 책임이 넘어가요. 흰 칸에 내 아이디어를 채우고, 고르기 칸에서 하나를 고르면 돼요.')}
+ <div class="builder">
+  <div class="frame">${F.map(st=>`<div class="stage" style="--c:${st.c}">
+    <div class="stage-tab"><span class="mn">${st.min}<small>분</small></span><span class="nm">${esc(st.nm)}</span><span class="en">${st.en}</span></div>
+    <div class="stage-body"><p class="stage-note">${st.note}</p>${st.blocks.map(b=>blockHTML(b,st)).join('')}</div></div>`).join('')}</div>
+  <aside class="checks" id="checks"></aside>
+ </div>
+ ${nav('활동 고르기','지도안 완성')}</section>`;
+}
+
+/* ---------- checks ---------- */
+function slots(){const F=frame(A(),T());const out=[];F.forEach(st=>st.blocks.forEach(b=>(b.parts||[]).forEach(p=>{if(typeof p==='object'&&!p.opts)out.push({st,b,p})})));return out}
+function val(k,p){return S.v[k]??(p&&p.opts?p.opts[0]:'')}
+function runChecks(){
+ const F=frame(A(),T()),sl=slots(),filled=sl.filter(x=>(S.v[x.p.k]||'').trim()).length,list=[];
+ F.forEach(st=>{const mine=sl.filter(x=>x.st.id===st.id),empty=mine.filter(x=>!(S.v[x.p.k]||'').trim());
+  list.push(empty.length?{s:'warn',t:`${st.nm}: 빈칸 ${empty.length}개`,d:empty.map(x=>x.b.lbl).join(', ')}:{s:'ok',t:`${st.nm}: 다 채웠어요`,d:''})});
+ if(S.terms.length!==2)list.push({s:'warn',t:'칠판 단어를 두 개 골라 주세요',d:`지금 ${S.terms.length}개`,src:'시범 단계'});
+ const pas=(S.v.passion||'').trim();
+ list.push(pas.length>=5?{s:'ok',t:'열정 한마디로 시작해요',d:'청중이 눈을 떼지 못할 거예요.',src:'7번 expressiveness'}:{s:'warn',t:'열정 한마디가 아직 없어요',d:'왜 이 주제를 가르치고 싶은지 한 문장만 써 보세요.',src:'7번 expressiveness'});
+ const cls=CLASSES.find(c=>c.id===S.cls),a=A();
+ if(cls){
+  const iss=[];
+  a.rules.filter(r=>r.cls===cls.id&&val(a.id+'.'+r.k,{opts:[1]})===r.v).forEach(r=>iss.push(r.msg));
+  if(cls.id==='basic'&&val('hintType',{opts:['단어 상자']})==='예시 답')iss.push('단어부터 막히는 반에는 "단어 상자"나 "문장 첫머리"가 더 도움이 돼요.');
+  list.push(iss.length?{s:'warn',t:'우리 반과 맞지 않는 부분',d:iss.join(' '),src:'8번 class conditions · '+cls.t}:{s:'ok',t:'우리 반과 잘 어우러져요',d:cls.t,src:'8번 class conditions'});
+ }else list.push({s:'wait',t:'우리 반 조건을 고르지 않았어요',d:'3단계에서 고르면 궁합을 점검해 줘요.',src:'8번 class conditions'});
+ return{filled,total:sl.length,list};
+}
+function renderChecks(){
+ const el=$('#checks');if(!el)return;
+ const r=runChecks();
+ el.innerHTML=`<h3>수업 점검표</h3>
+  <div class="meter"><div class="lbl"><span>채운 칸</span><span>${r.filled} / ${r.total}</span></div><div class="bar"><span style="width:${r.total?r.filled/r.total*100:0}%"></span></div></div>
+  <ul class="clist">${r.list.map(c=>`<li><span class="st ${c.s}">${c.s==='ok'?'✓':c.s==='wait'?'·':'!'}</span><span><span class="ct">${esc(c.t)}</span>${c.d?`<br><span class="cd">${esc(c.d)}</span>`:''}${c.src?`<br><span class="src">${esc(c.src)}</span>`:''}</span></li>`).join('')}</ul>`;
+}
+
+/* ---------- step 6 ---------- */
+function stageLines(st){
+ const t=T();
+ return st.blocks.map(b=>{
+  if(b.special==='order')return b.lbl+': '+S.order.map((pi,i)=>(i+1)+') '+t.points[pi]).join(' ');
+  if(b.special==='terms')return b.lbl+': '+(S.terms.join(', ')||'(안 고름)');
+  return b.lbl+': '+b.parts.map(p=>typeof p==='string'?p:(p.opts?val(p.k,p):((S.v[p.k]||'').trim()||'(빈칸)'))).join(' ');
+ });
+}
+function planText(){
+ const t=T(),a=A(),cls=CLASSES.find(c=>c.id===S.cls),L=[];
+ L.push(`[수업 지도안] ${S.name||'○○○ 선생님'} · ${t.title}`);
+ L.push(`수업 목표: 학생들이 ${t.goal}`);
+ L.push(`우리 반: ${cls?cls.t:'-'} / 나의 강점: ${S.strengths.map(id=>STRENGTHS.find(s=>s.id===id).t).join(', ')||'-'} / 중심 활동: ${a.t}`);
+ frame(a,t).forEach(st=>{L.push('');L.push(`■ ${st.nm} (${st.en}, ${st.min}분)`);stageLines(st).forEach(x=>L.push('- '+x))});
+ return L.join('\n');
+}
+function vStep5(){
+ const t=T(),a=A(),cls=CLASSES.find(c=>c.id===S.cls),r=runChecks();
+ const rows=frame(a,t).map(st=>`<tr><td><span class="dot" style="background:${st.c}"></span>${esc(st.nm)}<br><span class="hint">${st.en}</span></td><td class="min">${st.min}분</td><td>${stageLines(st).map(x=>esc(x).replaceAll('(빈칸)','<span class="empty">(빈칸)</span>')).join('<br>')}</td></tr>`).join('');
+ return `<section class="sheet">${(viewing?head('학생 지도안','제출된 수업 지도안','빨간 (빈칸)은 학생이 채우지 않은 곳이에요.'):head('STEP 6','나의 수업 지도안','선생님께 제출하거나, 화면을 캡처하거나 아래 글을 복사하세요. 친구와 바꿔 보고 점검표 기준으로 서로 조언해 주세요.'))}
+ <div class="plan">
+  <div class="plan-h"><h3>${esc(S.name||'○○○ 선생님')}의 수업</h3><span class="hint">${esc(t.title)} · ${a.t} · 50분</span></div>
+  <dl class="kv">
+   <dt>수업 목표</dt><dd>학생들이 ${esc(t.goal)}</dd>
+   <dt>우리 반</dt><dd>${cls?esc(cls.t):'-'}</dd>
+   <dt>나의 강점</dt><dd>${S.strengths.map(id=>{const s=STRENGTHS.find(x=>x.id===id);return esc(s.t)+' ('+s.en+')'}).join(', ')||'-'}</dd>
+   <dt>열정 한마디</dt><dd class="pen">${esc(S.v.passion)||'-'}</dd>
+  </dl>
+  <div class="tbl-wrap"><table><thead><tr><th>단계</th><th>시간</th><th>내용</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <ul class="clist">${r.list.filter(c=>c.s!=='ok').map(c=>`<li><span class="st ${c.s}">${c.s==='wait'?'·':'!'}</span><span><span class="ct">${esc(c.t)}</span> <span class="cd">${esc(c.d)}</span></span></li>`).join('')||'<li><span class="st ok">✓</span><span class="ct">점검표를 모두 통과했어요</span></li>'}</ul>
+ </div>
+ ${!viewing?`<div class="submit"><p><b>선생님께 제출하기</b>${SHEET_URL?'':' <span class="hint">(연습 모드: 이 기기에만 저장)</span>'}<br><span class="hint">${S.submittedAt?'제출함: '+fmt(S.submittedAt)+'. 고친 뒤 다시 누르면 새 내용으로 바뀌어요.':'학번 '+esc(S.no||'(없음)')+' · '+esc(S.name||'(이름 없음)')+'으로 제출해요. 여러 번 제출하면 마지막 내용만 남아요.'}</span></p><button class="btn primary" id="submit">${S.submittedAt?'다시 제출':'제출'}</button></div>`:''}
+ <div class="section"><div class="navrow"><h3>글로 복사하기</h3><button class="btn small" id="copy">복사</button></div><textarea class="copybox" id="copytxt" readonly>${esc(planText())}</textarea></div>
+ ${viewing?'':`<div class="navrow"><button class="btn" data-go="4">← 수업 코딩으로</button><button class="btn" id="restart">새 수업 만들기</button></div>`}</section>`;
+}
+
+/* ---------- teacher mode ---------- */
+// 구글 시트에 연결한 Apps Script 웹 앱 주소 (비어 있으면 이 기기에만 저장되는 연습 모드)
+const SHEET_URL='';
+const LOCAL_SUBS='teacher-lesson-local-subs';
+const R={teacher:location.hash==='#teacher',pw:'',authed:false,subs:null,open:null,filter:'',err:''};
+let viewing=false;
+async function call(body){const res=await fetch(SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});return res.json()}
+function localSubs(){try{return JSON.parse(localStorage.getItem(LOCAL_SUBS))||[]}catch(e){return []}}
+function saveLocalSubs(a){try{localStorage.setItem(LOCAL_SUBS,JSON.stringify(a))}catch(e){}}
+const fmt=t=>{try{return new Date(t).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}catch(e){return ''}};
+function withState(st,fn){const keep=S;S=Object.assign(blank(),st);viewing=true;try{return fn()}finally{S=keep;viewing=false}}
+function filledOf(st){return withState(st,()=>{const r=runChecks();return r.filled+' / '+r.total})}
+function vLogin(){
+ return `<section class="sheet" style="max-width:420px;margin:0 auto;width:100%">${head('교사 모드','교사 암호를 입력하세요',SHEET_URL?'':'연습 모드: 이 기기에서 제출한 지도안만 보여요.')}
+ <form id="tlogin" class="navrow" style="justify-content:flex-start"><input class="name" id="tpw" type="password" autocomplete="current-password" placeholder="교사 암호" value="${esc(R.pw)}"><button class="btn primary">들어가기</button></form>
+ <p class="hint" id="tmsg">${esc(R.err)}</p></section>`;
+}
+async function tLoad(){
+ if(!SHEET_URL){R.subs=localSubs();return}
+ const r=await call({action:'list',pw:R.pw});
+ if(!r.ok)throw new Error(r.error||'fail');
+ R.subs=r.rows;
+}
+async function tEnter(){
+ R.err='불러오는 중…';render();
+ try{await tLoad();R.authed=true;R.err='';try{sessionStorage.setItem('tl-tpw',R.pw)}catch(e){}}
+ catch(e){R.err=e.message==='pw'?'암호가 맞지 않아요.':'불러오지 못했어요. 다시 시도해 주세요.';try{sessionStorage.removeItem('tl-tpw')}catch(e){}}
+ render();
+}
+async function tDelete(no){
+ try{
+  if(SHEET_URL){const r=await call({action:'del',pw:R.pw,no});if(!r.ok)throw new Error(r.error)}
+  else saveLocalSubs(localSubs().filter(x=>x.no!==no));
+  R.subs=(R.subs||[]).filter(x=>x.no!==no);R.open=null;render();toast('지웠어요');
+ }catch(e){toast('지우지 못했어요')}
+}
+function vTeacher(){
+ if(!R.authed)return vLogin();
+ if(R.open){const d=(R.subs||[]).find(x=>x.no===R.open);if(d)return `<div style="display:flex;flex-direction:column;gap:14px"><div class="navrow"><button class="btn" id="back">← 제출 목록</button><span class="hint">${esc(d.no||'')} ${esc(d.student||'')} · 제출 ${fmt(d.submittedAt)}</span><button class="btn small" id="tdel" data-no="${esc(d.no)}">이 지도안 지우기</button></div>`+withState(d.state,vStep5)+'</div>';R.open=null}
+ const subs=(R.subs||[]).slice().sort((a,b)=>String(a.no||'').localeCompare(String(b.no||''),'ko',{numeric:true}));
+ const shown=subs.filter(x=>!R.filter||x.state?.topic===R.filter);
+ const cnt=k=>{const m={};subs.forEach(x=>{const v=x.state?.[k];if(v)m[v]=(m[v]||0)+1});return m};
+ const tc=cnt('topic'),ac=cnt('act');
+ const top=(m,list)=>{const e=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];return e?list.find(x=>x.id===e[0])?.t||list.find(x=>x.id===e[0])?.title:'-'};
+ return `<section class="sheet">${head('교사 모드','학생 수업 지도안 모아 보기','학생이 6단계에서 "제출"을 누르면 여기에 모여요. 새 제출을 보려면 "새로고침"을 누르세요. 카드를 누르면 그 학생의 지도안 전체가 열려요.')}
+ <div class="navrow" style="justify-content:flex-start"><button class="btn small" id="trefresh">새로고침</button>${SHEET_URL?'':'<span class="hint">연습 모드: 이 기기에서 제출한 지도안만 보여요</span>'}</div>
+ ${R.subs===null?'<p class="hint">제출 목록을 불러오는 중이에요…</p>':`
+ <div class="stats"><div class="stat"><b>${subs.length}</b><span>제출한 학생</span></div><div class="stat"><b style="font-size:18px">${esc(top(tc,TOPICS))}</b><span>가장 많이 고른 주제</span></div><div class="stat"><b style="font-size:18px">${esc(top(ac,ACTS))}</b><span>가장 많이 고른 활동</span></div></div>
+ <div class="navrow" style="justify-content:flex-start"><label class="hint" for="tfilter">주제별 보기</label><select class="filter" id="tfilter"><option value="">전체 (${subs.length})</option>${TOPICS.map(t=>`<option value="${t.id}" ${R.filter===t.id?'selected':''}>${esc(t.title)} (${tc[t.id]||0})</option>`).join('')}</select></div>
+ ${shown.length?`<div class="subs">${shown.map(x=>{const t=TOPICS.find(y=>y.id===x.state?.topic),a=ACTS.find(y=>y.id===x.state?.act);return `<button class="sub" data-open="${esc(x.no)}"><span class="who">${esc(x.no||'')} ${esc(x.student||x.state?.name||'이름 없음')}</span><span class="tp">${esc(t?t.title:'-')} × ${esc(a?a.t:'-')}</span><span class="row"><span>채운 칸 ${filledOf(x.state||{})}</span><span>${fmt(x.submittedAt)}</span></span></button>`}).join('')}</div>`:'<p class="hint">아직 제출한 학생이 없어요. 학생들에게 링크를 공유하고, 6단계에서 "제출"을 누르게 해 주세요.</p>'}`}
+ </section>`;
+}
+async function submitPlan(btn){
+ const no=S.no.trim(),name=S.name.trim();
+ if(!/^\d{5}$/.test(no)||!name){toast('3단계에서 학번 5자리와 이름을 먼저 써 주세요');go(2);return}
+ btn.disabled=true;btn.textContent='제출하는 중…';
+ try{
+  const at=new Date().toISOString(),st={...S};delete st.submittedAt;
+  const t=T(),a=A(),cls=CLASSES.find(c=>c.id===S.cls),r=runChecks();
+  const row={no,student:name,topic:t.title,act:a.t,cls:cls?cls.t:'',filled:r.filled+' / '+r.total,text:planText(),state:st,submittedAt:at};
+  if(SHEET_URL){const res=await call({action:'save',row});if(!res.ok)throw new Error(res.error)}
+  else saveLocalSubs([...localSubs().filter(x=>x.no!==no),row]);
+  S.submittedAt=at;save();render();toast('선생님께 제출했어요')}
+ catch(e){btn.disabled=false;btn.textContent='다시 시도';toast('제출하지 못했어요. 잠시 뒤 다시 눌러 주세요')}
+}
+
+/* ---------- render & events ---------- */
+function render(){
+ $('#steps').hidden=R.teacher;
+ if(R.teacher){$('#main').innerHTML=vTeacher();if(!R.authed)$('#tpw')?.focus();return}
+ renderSteps();$('#main').innerHTML=[vStep0,vStep1,vStep2,vStep3,vStep4,vStep5][S.step]();renderChecks()}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+ if(d.open){R.open=d.open;render();window.scrollTo({top:0});return}
+ if(b.id==='back'){R.open=null;render();return}
+ if(b.id==='trefresh'){b.disabled=true;b.textContent='불러오는 중…';tLoad().then(()=>{render();toast('새로 불러왔어요')}).catch(()=>{render();toast('불러오지 못했어요')});return}
+ if(b.id==='tdel'){if(d.sure)tDelete(d.no);else{d.sure='1';b.textContent='한 번 더 누르면 지워져요'}return}
+ if(b.id==='submit'){submitPlan(b);return}
+ if(R.teacher)return;
+ if(d.go!==undefined){go(+d.go);return}
+ if(d.topic){if(S.topic!==d.topic){S.topic=d.topic;S.order=[0,1,2];S.terms=[];['hook','example','demo','hint','exit','take'].forEach(k=>delete S.v[k])}save();render();return}
+ if(d.cls){S.cls=S.cls===d.cls?null:d.cls;save();render();return}
+ if(d.str){const i=S.strengths.indexOf(d.str);if(i>=0)S.strengths.splice(i,1);else{if(S.strengths.length>=2){toast('강점은 두 가지만 고를 수 있어요');return}S.strengths.push(d.str)}save();render();return}
+ if(d.act){S.act=d.act;save();render();return}
+ if(b.id==='draw'){const c=CLASSES[Math.floor(Math.random()*CLASSES.length)];S.cls=c.id;save();render();document.querySelector(`[data-cls="${c.id}"]`)?.classList.add('flip');toast('우리 반: '+c.t);return}
+ if(d.ord!==undefined){const i=+d.ord,j=i+ +d.d;[S.order[i],S.order[j]]=[S.order[j],S.order[i]];save();render();return}
+ if(d.term){const i=S.terms.indexOf(d.term);if(i>=0)S.terms.splice(i,1);else{if(S.terms.length>=2){toast('두 개만 고를 수 있어요');return}S.terms.push(d.term)}save();render();return}
+ if(b.id==='copy'){const tx=$('#copytxt'),v=tx.value;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast('복사했어요')).catch(()=>{tx.focus();tx.select();toast('선택된 글을 Ctrl+C로 복사하세요')});return}
+ if(b.id==='restart'){if(d.sure){S=blank();save();render();toast('새 수업을 시작해요')}else{d.sure='1';b.textContent='한 번 더 누르면 지워져요'}return}
+});
+function onField(e){const t=e.target;
+ if(t.id==='tname'){S.name=t.value;save();return}
+ if(t.id==='tno'){S.no=t.value;save();return}
+ if(t.id==='tfilter'){if(e.type==='change'){R.filter=t.value;render()}return}
+ if(t.dataset.k){S.v[t.dataset.k]=t.value;if(t.tagName==='INPUT')t.classList.toggle('filled',!!t.value.trim());save();renderChecks()}}
+document.addEventListener('input',onField);
+document.addEventListener('change',onField);
+if(S.step>0&&!S.topic)S.step=0;
+if(S.step>=4&&!S.act)S.step=3;
+document.addEventListener('submit',e=>{if(e.target.id==='tlogin'){e.preventDefault();R.pw=$('#tpw').value.trim();if(R.pw||!SHEET_URL)tEnter()}});
+window.addEventListener('hashchange',()=>{R.teacher=location.hash==='#teacher';R.open=null;render();window.scrollTo({top:0})});
+if(R.teacher){try{R.pw=sessionStorage.getItem('tl-tpw')||''}catch(e){}if(R.pw)tEnter()}
+render();
+</script>
+
+</body></html>
