@@ -204,10 +204,6 @@ details.ideas[open] summary{margin-bottom:10px}
 .actsum b{color:var(--c)}
 .actsum .empty,.empty{color:var(--bad)}
 .blk .actbtn{align-self:flex-start;border:1.5px solid rgba(255,255,255,.75);background:transparent;color:#fff;border-radius:999px;padding:2px 12px;font-size:13px}
-.passage{border-left:4px solid var(--pen);background:var(--paper);border-radius:0 10px 10px 0;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
-.passage .src{font-size:12px;color:var(--pen);font-weight:700;letter-spacing:.06em}
-.passage .qt{font-family:Georgia,'Times New Roman',serif;font-size:15.5px}
-.passage .ask{font-weight:500}
 .starters{display:flex;flex-wrap:wrap;gap:6px}
 .starters button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:3px 12px;font-size:13px;font-family:Georgia,'Times New Roman',serif}
 .starters button:hover{border-color:var(--pen)}
@@ -328,17 +324,6 @@ const ACTF=[
  {k:'a.expr',lbl:'학생들이 쓸 영어 표현',ph:'활동하면서 꼭 써 볼 영어 문장이나 표현'},
  {k:'a.why',lbl:'이 활동을 만든 이유',ph:'이 활동이 수업 목표에 어떻게 도움이 되나요?',long:1}
 ];
-const PASSAGES=[
- {k:'c.p8',src:'8번 지문',qt:'"A good teacher is a combination of many abilities."',ask:'내가 고른 강점은 실제 수업에서 어떻게 드러났나요? 해 보니 나에게 더 필요했던 능력은 무엇인가요?'},
- {k:'c.p9',src:'9번 지문',qt:'비계(scaffolding)와 점진적 책임 이양: 시범 → 함께 → 혼자',ask:'어느 단계에서 어떤 도움을 주었고, 언제 그 도움을 거두었나요? 친구들은 혼자서도 해낼 수 있었나요?'},
- {k:'c.p7',src:'7번 지문',qt:'expressiveness: 주제에 대한 열정을 청중에게 전하는 힘',ask:'나의 열정을 어떻게 전했나요? 친구들의 반응은 어땠나요?'}
-];
-const REFLECT=[
- {k:'r.good',lbl:'잘된 점',ph:'친구들이 잘 따라온 부분, 계획대로 된 부분'},
- {k:'r.bad',lbl:'아쉬웠던 점',ph:'시간이 모자랐거나, 친구들이 어려워했던 부분'},
- {k:'r.fb',lbl:'친구들의 반응과 조언',ph:'학생 역할을 한 친구들이 해 준 말, 질문, 표정'},
- {k:'r.next',lbl:'다시 가르친다면',ph:'다음에는 무엇을, 왜 바꾸고 싶나요?'}
-];
 const STARTERS=['As a teacher, I learned that','Next time, I will','Teaching my classmates made me realize that','The hardest part of teaching was'];
 /* 고정된 50분 틀 (9번 점진적 책임 이양). 모든 칸은 학생이 직접 쓴다. */
 function frame(u){return[
@@ -359,7 +344,7 @@ function frame(u){return[
   {lbl:'출구 질문',parts:[{k:'exit',ph:'교실을 나가기 전에 답할 질문 하나'}]},
   {lbl:'오늘의 한 문장',parts:['오늘 꼭 기억할 것은',{k:'take',ph:'핵심 한 문장'},'입니다.']}]}
 ]}
-const STEPS=['주제 고르기','골자 보기','나의 강점','활동 만들기','수업 코딩','지도안 완성','돌아보기'];
+const STEPS=['주제 고르기','골자 보기','나의 강점','활동 만들기','수업 코딩','지도안 완성','영어 성찰'];
 
 /* ---------- state ---------- */
 const KEY='teacher-lesson-v3';
@@ -483,7 +468,7 @@ function stageLines(st){
   return b.lbl+': '+b.parts.map(p=>typeof p==='string'?p:(tv(p.k)||'(빈칸)')).join(' ');
  });
 }
-function reflected(){return [...PASSAGES,...REFLECT].some(x=>tv(x.k))||!!tv('en')}
+function reflected(){return !!tv('en')}
 function planText(){
  const t=T(),L=[];
  L.push(`[수업 지도안] ${S.name||'○○○ 선생님'} · ${t.title}`);
@@ -491,13 +476,7 @@ function planText(){
  L.push(`나의 강점: `+(myStrengths().map(s=>`${s.t} → ${tv('use.'+s.id)||'(빈칸)'}`).join(' / ')||'-'));
  L.push(`중심 활동: ${tv('a.name')||'(빈칸)'}`);
  frame(t).forEach(st=>{L.push('');L.push(`■ ${st.nm} (${st.en}, ${st.min}분)`);stageLines(st).forEach(x=>L.push('- '+x))});
- if(reflected()){
-  L.push('');L.push('■ 돌아보기: 수업 내용과 연결');
-  PASSAGES.forEach(p=>L.push(`- ${p.src}: ${tv(p.k)||'(빈칸)'}`));
-  L.push('■ 돌아보기: 수업해 본 뒤');
-  REFLECT.forEach(r=>L.push(`- ${r.lbl}: ${tv(r.k)||'(빈칸)'}`));
-  L.push(`■ My reflection: ${tv('en')||'(빈칸)'}`);
- }
+ if(reflected()){L.push('');L.push(`■ My reflection: ${tv('en')}`)}
  return L.join('\n');
 }
 function submitBox(label,note){
@@ -505,17 +484,14 @@ function submitBox(label,note){
  return `<div class="submit"><p><b>${label}</b>${SHEET_URL?'':' <span class="hint">(연습 모드: 이 기기에만 저장)</span>'}<br><span class="hint">${S.submittedAt?'마지막 제출: '+fmt(S.submittedAt)+'. 고친 뒤 다시 누르면 새 내용으로 바뀌어요.':note}</span></p><button class="btn primary" id="submit">${S.submittedAt?'다시 제출':'제출'}</button></div>`;
 }
 function reflectView(){
- const row=(lbl,k)=>`<tr><th style="width:160px">${lbl}</th><td>${tv(k)?esc(tv(k)):'<span class="empty">(빈칸)</span>'}</td></tr>`;
  return `<div class="tbl-wrap"><table><tbody>
-  ${PASSAGES.map(p=>row(p.src+' 연결',p.k)).join('')}
-  ${REFLECT.map(r=>row(r.lbl,r.k)).join('')}
-  <tr><th>My reflection</th><td class="ensent" style="font-size:15.5px">${tv('en')?esc(tv('en')):'<span class="empty">(빈칸)</span>'}</td></tr>
+  <tr><th style="width:160px">My reflection</th><td class="ensent" style="font-size:15.5px">${tv('en')?esc(tv('en')):'<span class="empty">(빈칸)</span>'}</td></tr>
  </tbody></table></div>`;
 }
 function vStep5(){
  const t=T(),r=runChecks(),mine=myStrengths();
  const rows=frame(t).map(st=>`<tr><td><span class="dot" style="background:${st.c}"></span>${esc(st.nm)}<br><span class="hint">${st.en}</span></td><td class="min">${st.min}분</td><td>${stageLines(st).map(x=>esc(x).replaceAll('(빈칸)','<span class="empty">(빈칸)</span>')).join('<br>')}</td></tr>`).join('');
- return `<section class="sheet">${viewing?head('학생 지도안','제출된 수업 지도안','빨간 (빈칸)은 학생이 채우지 않은 곳이에요.'):head('STEP 6','나의 수업 지도안','먼저 선생님께 제출하세요. 그다음 이 지도안으로 친구들에게 실제로 수업해 보고, 7단계에서 돌아보기를 써서 다시 제출해요.')}
+ return `<section class="sheet">${viewing?head('학생 지도안','제출된 수업 지도안','빨간 (빈칸)은 학생이 채우지 않은 곳이에요.'):head('STEP 6','나의 수업 지도안','먼저 선생님께 제출하세요. 그다음 이 지도안으로 친구들에게 실제로 수업해 보고, 7단계에서 영어 한 문장 성찰을 써서 다시 제출해요.')}
  <div class="plan">
   <div class="plan-h"><h3>${esc(S.name||'○○○ 선생님')}의 수업</h3><span class="hint">${esc(t.title)} · ${esc(tv('a.name')||'활동 이름 없음')} · 50분</span></div>
   <dl class="kv">
@@ -526,11 +502,11 @@ function vStep5(){
   </dl>
   <div class="tbl-wrap"><table><thead><tr><th>단계</th><th>시간</th><th>내용</th></tr></thead><tbody>${rows}</tbody></table></div>
   <ul class="clist">${r.list.filter(c=>c.s!=='ok').map(c=>`<li><span class="st ${c.s}">${c.s==='wait'?'·':'!'}</span><span><span class="ct">${esc(c.t)}</span> <span class="cd">${esc(c.d)}</span></span></li>`).join('')||'<li><span class="st ok">✓</span><span class="ct">점검표를 모두 통과했어요</span></li>'}</ul>
-  ${viewing||reflected()?`<div class="plan-h" style="margin-top:6px"><h3>돌아보기</h3><span class="hint">수업해 본 뒤</span></div>${reflectView()}`:''}
+  ${viewing||reflected()?`<div class="plan-h" style="margin-top:6px"><h3>영어 성찰</h3><span class="hint">수업해 본 뒤</span></div>${reflectView()}`:''}
  </div>
  ${submitBox('지도안 제출하기','학번 '+esc(S.no||'(없음)')+' · '+esc(S.name||'(이름 없음)')+'으로 제출해요. 여러 번 제출하면 마지막 내용만 남아요.')}
  <div class="section"><div class="navrow"><h3>글로 복사하기</h3><button class="btn small" id="copy">복사</button></div><textarea class="copybox" id="copytxt" readonly>${esc(planText())}</textarea></div>
- ${viewing?'':`<div class="navrow"><button class="btn" data-go="4">← 수업 코딩으로</button><button class="btn" id="restart">새 수업 만들기</button><button class="btn primary" data-go="6">수업해 본 뒤 돌아보기 →</button></div>`}</section>`;
+ ${viewing?'':`<div class="navrow"><button class="btn" data-go="4">← 수업 코딩으로</button><button class="btn" id="restart">새 수업 만들기</button><button class="btn primary" data-go="6">수업해 본 뒤 영어 성찰 쓰기 →</button></div>`}</section>`;
 }
 
 /* ---------- step 7: reflection ---------- */
@@ -538,21 +514,14 @@ function enChecks(s){s=s.trim();const w=s?s.split(/\s+/).length:0;return[
  {ok:/^[A-Z]/.test(s),t:'대문자로 시작'},{ok:/[.!?]$/.test(s),t:'마침표로 끝'},{ok:w>=8,t:`8단어 이상 (지금 ${w}개)`},{ok:s&&!/[ㄱ-ㅎ가-힣]/.test(s),t:'영어로만'}]}
 function enChkHTML(){return enChecks(S.v.en||'').map(c=>`<li class="${c.ok?'ok':'no'}">${c.ok?'✓':'○'} ${c.t}</li>`).join('')}
 function vStep6(){
- const t=T();
- return `<section class="sheet">${head('STEP 7','수업을 돌아봐요','친구들에게 실제로 수업해 본 뒤에 써요. 내 수업을 우리가 배운 지문 내용과 연결 지어 생각해 보세요.')}
- <div class="section"><h3>1. 수업 내용과 연결하기</h3>
-  ${PASSAGES.map(p=>`<div class="passage"><span class="src">${p.src}</span><span class="qt">${esc(p.qt)}</span><label class="ask" for="f-${p.k.replace(/\W/g,'_')}">${esc(p.ask)}</label><textarea class="inp ${tv(p.k)?'filled':''}" id="f-${p.k.replace(/\W/g,'_')}" data-k="${p.k}" placeholder="내 수업에서 있었던 일을 예로 들어 써 보세요">${esc(S.v[p.k]??'')}</textarea></div>`).join('')}
- </div>
- <div class="section"><h3>2. 학생들에게 해 보고 나서</h3>
-  <div class="form">${REFLECT.map(r=>field(r.k,r.lbl,r.ph,{long:1})).join('')}</div>
- </div>
- <div class="section"><h3>3. My reflection in English</h3>
-  <p class="hint">오늘 선생님이 되어 본 경험을 영어 한 문장으로 써 보세요. 막히면 아래 문장 첫머리를 눌러서 이어 써도 돼요.</p>
+ return `<section class="sheet">${head('STEP 7','My reflection in English','친구들에게 실제로 수업해 본 뒤에 써요. 선생님이 되어 본 경험을 영어 한 문장으로 돌아보세요.')}
+ <div class="section">
+  <p class="hint">막히면 아래 문장 첫머리를 눌러서 이어 써도 돼요.</p>
   <div class="starters">${STARTERS.map(s=>`<button data-starter="${esc(s)}">${esc(s)} …</button>`).join('')}</div>
   <input class="inp en ${tv('en')?'filled':''}" id="f-en" data-k="en" value="${esc(S.v.en??'')}" placeholder="As a teacher, I learned that ..." lang="en" spellcheck="true" autocomplete="off" aria-label="My reflection in English">
   <ul class="enchk" id="enchk">${enChkHTML()}</ul>
  </div>
- ${submitBox('돌아보기까지 제출하기','지도안과 돌아보기가 함께 제출돼요. 학번 '+esc(S.no||'(없음)')+' · '+esc(S.name||'(이름 없음)'))}
+ ${submitBox('영어 성찰까지 제출하기','지도안과 영어 한 문장이 함께 제출돼요. 학번 '+esc(S.no||'(없음)')+' · '+esc(S.name||'(이름 없음)'))}
  ${nav('지도안 보기','')}</section>`;
 }
 
@@ -602,12 +571,12 @@ function vTeacher(){
  const topT=Object.entries(tc).sort((a,b)=>b[1]-a[1])[0];
  const nRefl=subs.filter(x=>info.get(x.no).refl).length;
  const ens=shown.filter(x=>info.get(x.no).en);
- return `<section class="sheet">${head('교사 모드','학생 수업 지도안 모아 보기','학생이 6단계(지도안)나 7단계(돌아보기)에서 "제출"을 누르면 여기에 모여요. 같은 학번은 마지막 제출만 남아요. 새 제출을 보려면 "새로고침"을 누르세요.')}
+ return `<section class="sheet">${head('교사 모드','학생 수업 지도안 모아 보기','학생이 6단계(지도안)나 7단계(영어 성찰)에서 "제출"을 누르면 여기에 모여요. 같은 학번은 마지막 제출만 남아요. 새 제출을 보려면 "새로고침"을 누르세요.')}
  <div class="navrow" style="justify-content:flex-start"><button class="btn small" id="trefresh">새로고침</button>${SHEET_URL?'':'<span class="hint">연습 모드: 이 기기에서 제출한 지도안만 보여요</span>'}</div>
  ${R.subs===null?'<p class="hint">제출 목록을 불러오는 중이에요…</p>':`
- <div class="stats"><div class="stat"><b>${subs.length}</b><span>제출한 학생</span></div><div class="stat"><b>${nRefl}</b><span>돌아보기까지 쓴 학생</span></div><div class="stat"><b style="font-size:18px">${esc(topT?TOPICS.find(t=>t.id===topT[0])?.title:'-')}</b><span>가장 많이 고른 주제</span></div></div>
+ <div class="stats"><div class="stat"><b>${subs.length}</b><span>제출한 학생</span></div><div class="stat"><b>${nRefl}</b><span>영어 성찰까지 쓴 학생</span></div><div class="stat"><b style="font-size:18px">${esc(topT?TOPICS.find(t=>t.id===topT[0])?.title:'-')}</b><span>가장 많이 고른 주제</span></div></div>
  <div class="navrow" style="justify-content:flex-start"><label class="hint" for="tfilter">주제별 보기</label><select class="filter" id="tfilter"><option value="">전체 (${subs.length})</option>${TOPICS.map(t=>`<option value="${t.id}" ${R.filter===t.id?'selected':''}>${esc(t.title)} (${tc[t.id]||0})</option>`).join('')}</select></div>
- ${shown.length?`<div class="subs">${shown.map(x=>{const i=info.get(x.no);return `<button class="sub" data-open="${esc(x.no)}"><span class="who">${esc(x.no||'')} ${esc(x.student||'이름 없음')}</span><span class="tp">${esc(i.t?i.t.title:'-')} × ${esc(i.act||'활동 이름 없음')}</span>${i.en?`<span class="ensent">"${esc(i.en)}"</span>`:''}<span class="row"><span>채운 칸 ${i.filled} · <span class="tag ${i.refl?'ok':''}">${i.refl?'돌아보기 ✓':'돌아보기 전'}</span></span><span>${fmt(x.submittedAt)}</span></span></button>`}).join('')}</div>`:'<p class="hint">아직 제출한 학생이 없어요. 학생들에게 링크를 공유하고, 6단계에서 "제출"을 누르게 해 주세요.</p>'}
+ ${shown.length?`<div class="subs">${shown.map(x=>{const i=info.get(x.no);return `<button class="sub" data-open="${esc(x.no)}"><span class="who">${esc(x.no||'')} ${esc(x.student||'이름 없음')}</span><span class="tp">${esc(i.t?i.t.title:'-')} × ${esc(i.act||'활동 이름 없음')}</span>${i.en?`<span class="ensent">"${esc(i.en)}"</span>`:''}<span class="row"><span>채운 칸 ${i.filled} · <span class="tag ${i.refl?'ok':''}">${i.refl?'영어 성찰 ✓':'영어 성찰 전'}</span></span><span>${fmt(x.submittedAt)}</span></span></button>`}).join('')}</div>`:'<p class="hint">아직 제출한 학생이 없어요. 학생들에게 링크를 공유하고, 6단계에서 "제출"을 누르게 해 주세요.</p>'}
  ${ens.length?`<div class="section"><h3>영어 한 문장 성찰 모아 보기</h3><ul class="enlist">${ens.map(x=>`<li><span class="hint">${esc(x.no)} ${esc(x.student||'')}</span><span class="ensent">${esc(info.get(x.no).en)}</span></li>`).join('')}</ul></div>`:''}`}
  </section>`;
 }
